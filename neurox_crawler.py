@@ -1,3 +1,4 @@
+
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -16,6 +17,7 @@ import sys
 import time
 import socket
 import threading
+from flask import Flask
 
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
@@ -40,6 +42,19 @@ def load_target_sites():
         print("⚠️ Failed to load target sites:", e)
         return []
 
+# --- استخراج تصویر از سایت ---
+def extract_image_from_site(soup):
+    og_img = soup.find("meta", property="og:image")
+    if og_img and og_img.get("content"):
+        return og_img["content"]
+    twitter_img = soup.find("meta", property="twitter:image")
+    if twitter_img and twitter_img.get("content"):
+        return twitter_img["content"]
+    img = soup.find("img")
+    if img and img.get("src"):
+        return img["src"]
+    return ""
+
 # --- استخراج متن از سایت ---
 def extract_text_from_site(url):
     try:
@@ -47,10 +62,11 @@ def extract_text_from_site(url):
         soup = BeautifulSoup(response.text, "html.parser")
         paragraphs = soup.find_all("p")
         text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
-        return text.strip()
+        image_url = extract_image_from_site(soup)
+        return text.strip(), image_url
     except Exception as e:
         print(f"Error scraping {url}: {e}")
-        return None
+        return None, None
 
 # --- لود تبلیغات ---
 def load_promos(file_path="promo_texts.txt"):
@@ -65,14 +81,14 @@ def load_promos(file_path="promo_texts.txt"):
 PROMO_LINES = load_promos()
 
 # --- تولید پست برای Backendless ---
-def generate_post(text, source_url):
+def generate_post(text, source_url, image_url=""):
     promo = random.choice(PROMO_LINES) if PROMO_LINES else ""
     platform = random.choice(PLATFORMS)
     now = datetime.now(timezone.utc)
     return {
         "title": "Betting Risk Exposed",
         "description": text + "\n\n" + promo,
-        "imageUrl": "",
+        "imageUrl": image_url,
         "sourceUrl": source_url,
         "targetPlatform": platform,
         "scheduledAt": (now + timedelta(minutes=random.randint(5, 60))).strftime("%Y-%m-%d %H:%M:%S"),
@@ -95,19 +111,16 @@ def main():
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
         print("🔍 Scraping:", site)
-        text = extract_text_from_site(site)
+        text, image_url = extract_text_from_site(site)
         if not text:
             continue
         content_hash = hashlib.sha256(text.encode()).hexdigest()
         if redis_client.sismember("seen_hashes", content_hash):
             print("⏭️ Duplicate content. Skipping.")
             continue
-        post = generate_post(text, site)
+        post = generate_post(text, site, image_url)
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
-        
-from flask import Flask
-import threading
 
 app = Flask(__name__)
 
@@ -129,10 +142,7 @@ def loop_runner():
         print("❌ Error in loop:", e)
 
 if __name__ == "__main__":
-    # اجرای Flask روی Thread جدا
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
-
-    # اجرای حلقه crawler
     loop_runner()
