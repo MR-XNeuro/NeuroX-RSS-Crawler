@@ -106,7 +106,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-        sys.exit(0)  # <== این باید داخل try باشه
     except Exception as e:
         print("❌ Unhandled exception:", e)
-        sys.exit(1)
+        sys.exit(1)  # Failure
+    else:
+        print("✅ Completed successfully.")
+        sys.exit(0)  # Success
