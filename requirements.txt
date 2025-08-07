@@ -4,3 +4,4 @@ feedparser
 redis
 beautifulsoup4
 flask
+cloudscraper
