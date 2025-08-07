@@ -14,6 +14,8 @@ from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
 import sys
 import time
+import socket
+import threading
 
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
@@ -118,3 +120,20 @@ if __name__ == "__main__":
     finally:
         print("🟢 Graceful shutdown.")
         sys.exit(exit_code)
+
+def keep_alive_dummy_server():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('0.0.0.0', 10000))  # یک پورت تصادفی که پورت باز باشه
+        s.listen(1)
+        print("🟢 Dummy server started to keep Render happy.")
+        s.accept()
+    except Exception as e:
+        print("⚠️ Dummy server error:", e)
+
+# اجرای سرور در بک‌گراند برای جلوگیری از exit زودهنگام
+threading.Thread(target=keep_alive_dummy_server, daemon=True).start()
+
+# خواب مصنوعی برای 3 دقیقه (یا بیشتر اگه خواستی)
+time.sleep(180)
+print("✅ Graceful exit without failure.")
