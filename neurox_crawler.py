@@ -69,31 +69,31 @@ def extract_text_from_site(url):
     headers_scraperapi = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
     }
-
+    
         return any(domain in target_url for domain in heavy_sites)
-
+    
     if is_heavy_site(url):
         delay_range = (7, 10)
         headers_scraperapi.update({"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15"})
     else:
         delay_range = (2, 4)
-
+    
     SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
     APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
-
+    
     if not SCRAPER_API_KEY or not APILAYER_API_KEY:
         print("❌ API keys not found in environment variables.")
         return None, None
-
+    
     headers_scraperapi = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
     }
-
+    
     headers_apilayer = {
         "Content-Type": "application/json",
         "apikey": APILAYER_API_KEY
     }
-
+    
     apis = [
         {
             "name": "scraperapi",
@@ -111,9 +111,9 @@ def extract_text_from_site(url):
             "is_json": True
         }
     ]
-
+    
     random.shuffle(apis)
-
+    
     for api in apis:
         for attempt in range(2):  # retry up to 2 times before fallback
             try:
@@ -139,10 +139,10 @@ def extract_text_from_site(url):
             except Exception as e:
                 print(f"⚠️ Error with {api['name']} (Attempt {attempt+1}) → {e}")
                 continue
-
-
+    
+    
     # Fallback to cloudscraper below was preserved.
-
+    
     try:
         print("☁️ Fallback: Trying cloudscraper...")
         time.sleep(random.uniform(*delay_range))
@@ -158,8 +158,9 @@ def extract_text_from_site(url):
     except Exception as e:
         print(f"❌ All scraping methods failed for {url}: {e}")
         return None, None
-
-
+    
+    return False
+    
 def load_promos(file_path="promo_texts.txt"):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
