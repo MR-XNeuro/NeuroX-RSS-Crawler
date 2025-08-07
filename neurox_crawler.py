@@ -108,5 +108,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print("❌ Unhandled exception:", e)
-        sys.exit(1)
-    sys.exit(0)
+        sys.exit(1)  # Failure
+    sys.exit(0)      # Success!
