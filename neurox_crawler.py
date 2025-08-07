@@ -66,11 +66,15 @@ def extract_text_from_site(url):
     ]
 
     def is_heavy_site(target_url):
+    headers_scraperapi = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
+    }
+
         return any(domain in target_url for domain in heavy_sites)
 
     if is_heavy_site(url):
         delay_range = (7, 10)
-        headers_scraperapi["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15"
+        headers_scraperapi.update({"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15"})
     else:
         delay_range = (2, 4)
 
