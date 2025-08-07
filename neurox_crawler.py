@@ -49,16 +49,12 @@ def extract_image_from_site(soup):
     return ""
 
 def extract_text_from_site(url):
-    heavy_sites = [
-        "decrypt.co", "cointelegraph.com", "marketwatch.com",
-        "verywellmind.com", "casino.org", "psychologytoday.com",
-        "tradingview.com", "beincrypto.com", "bitcoinmagazine.com",
-        "fxstreet.com", "cryptopotato.com", "fool.com", "cardschat.com",
-        "legalsportsreport.com"
-    ]
-
-    def is_heavy_site(target_url):
-        return any(domain in target_url for domain in heavy_sites)
+    import time
+    import random
+    import requests
+    import os
+    from bs4 import BeautifulSoup
+    import cloudscraper
 
     SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
     APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
@@ -67,17 +63,9 @@ def extract_text_from_site(url):
         print("❌ API keys not found in environment variables.")
         return None, None
 
-    # تنظیم اولیه headers
     headers_scraperapi = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
     }
-
-    # سایت‌های سنگین: تغییر header + افزایش تاخیر
-    if is_heavy_site(url):
-        delay_range = (7, 10)
-        headers_scraperapi["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15"
-    else:
-        delay_range = (2, 4)
 
     headers_apilayer = {
         "Content-Type": "application/json",
@@ -105,37 +93,40 @@ def extract_text_from_site(url):
     random.shuffle(apis)
 
     for api in apis:
-        for attempt in range(2):  # retry up to 2 times
-            try:
-                print(f"🛰️ Trying: {api['name']} (Attempt {attempt+1})")
-                time.sleep(random.uniform(*delay_range))
-                if api["method"] == "GET":
-                    response = requests.get(api["url"], headers=api["headers"], timeout=25)
-                else:
-                    response = requests.post(
-                        api["url"],
-                        headers=api["headers"],
-                        json=api.get("data", {}),
-                        timeout=25
-                    )
-                if response.status_code != 200:
-                    raise Exception(f"HTTP {response.status_code}")
-                html = response.text if not api["is_json"] else response.json().get("content", "")
-                soup = BeautifulSoup(html, "html.parser")
-                paragraphs = soup.find_all("p")
-                text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
-                image_url = extract_image_from_site(soup)
-                return text.strip(), image_url
-            except Exception as e:
-                print(f"⚠️ Error with {api['name']} (Attempt {attempt+1}) → {e}")
-                continue
+        try:
+            print(f"🛰️ Trying: {api['name']}")
+            time.sleep(random.uniform(2, 5))
+
+            if api["method"] == "GET":
+                response = requests.get(api["url"], headers=api["headers"], timeout=15)
+            else:
+                response = requests.post(
+                    api["url"],
+                    headers=api["headers"],
+                    json=api.get("data", {}),
+                    timeout=15
+                )
+
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}")
+
+            html = response.text if not api["is_json"] else response.json().get("content", "")
+            soup = BeautifulSoup(html, "html.parser")
+            paragraphs = soup.find_all("p")
+            text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+            image_url = extract_image_from_site(soup)
+            return text.strip(), image_url
+
+        except Exception as e:
+            print(f"⚠️ Error with {api['name']} → {e}")
+            continue
 
     # Fallback به cloudscraper
     try:
         print("☁️ Fallback: Trying cloudscraper...")
-        time.sleep(random.uniform(*delay_range))
+        time.sleep(random.uniform(2, 5))
         scraper = cloudscraper.create_scraper()
-        response = scraper.get(url, headers=headers_scraperapi, timeout=25)
+        response = scraper.get(url, headers=headers_scraperapi, timeout=15)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}")
         soup = BeautifulSoup(response.text, "html.parser")
@@ -146,9 +137,8 @@ def extract_text_from_site(url):
     except Exception as e:
         print(f"❌ All scraping methods failed for {url}: {e}")
         return None, None
-    
-    return False
-    
+
+
 def load_promos(file_path="promo_texts.txt"):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -187,40 +177,17 @@ def post_to_backendless(data):
 def main():
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
-
-        try:
-            head_response = requests.head(site, timeout=10)
-            if head_response.status_code >= 400:
-                print(f"🚫 HEAD check failed for {site} → {head_response.status_code}")
-                continue
-        except Exception as e:
-            print(f"🚫 HEAD request error for {site} → {e}")
-            continue
-
-        if not site.startswith("http"):
-            print(f"🚫 Skipping invalid URL: {site}")
-            continue
-
         print("🔍 Scraping:", site)
-        result = extract_text_from_site(site)
-
-        if not result or not isinstance(result, tuple):
-            continue
-
-        text, image_url = result
-
+        text, image_url = extract_text_from_site(site)
         if not text:
             continue
-
         content_hash = hashlib.sha256(text.encode()).hexdigest()
         if redis_client.sismember("seen_hashes", content_hash):
             print("⏭️ Duplicate content. Skipping.")
             continue
-
         post = generate_post(text, site, image_url)
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
-
 
 # === Flask Setup ===
 app = Flask(__name__)
