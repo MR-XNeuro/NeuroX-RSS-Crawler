@@ -64,7 +64,7 @@ def extract_text_from_site(url):
         return None, None
 
     headers_scraperapi = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Mobile/15E148 Safari/604.1"
     }
 
     headers_apilayer = {
@@ -233,3 +233,30 @@ if __name__ == "__main__":
     flask_thread.start()
 
     loop_runner()
+
+
+
+
+# بررسی سایت‌های سنگین
+HEAVY_SITES = [
+    "decrypt.co", "cointelegraph.com", "marketwatch.com", "bitcoinmagazine.com",
+    "psychologytoday.com", "verywellmind.com", "coindesk.com"
+]
+
+# لیست سفید API برای بعضی سایت‌ها
+API_WHITELIST = {
+    "scraperapi": ["coindesk.com", "marketwatch.com", "igamingbusiness.com"],
+    "apilayer": ["verywellmind.com", "begambleaware.org"]
+}
+
+def is_heavy_site(url):
+    for site in HEAVY_SITES:
+        if site in url:
+            return True
+    return False
+
+def get_preferred_api(url):
+    for api, sites in API_WHITELIST.items():
+        if any(site in url for site in sites):
+            return api
+    return None
