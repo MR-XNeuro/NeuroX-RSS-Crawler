@@ -13,6 +13,7 @@ import redis
 from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
 import sys
+import time
 
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
@@ -106,9 +107,10 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+        print("✅ Done.")
+        time.sleep(3)  # زمان برای ثبت لاگ‌ها
+        sys.exit(0)    # موفقیت کامل
     except Exception as e:
         print("❌ Unhandled exception:", e)
-        sys.exit(1)  # Failure
-    else:
-        print("✅ Completed successfully.")
-        sys.exit(0)  # Success
+        time.sleep(2)
+        sys.exit(1)    # خطا واقعی
