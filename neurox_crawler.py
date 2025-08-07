@@ -124,7 +124,7 @@ def loop_runner():
             print(f"⏰ Start Run: {datetime.now(timezone.utc).isoformat()}")
             main()
             print("🟢 Sleeping for 30 minutes...\n")
-            time.sleep(60 * 30)
+            time.sleep(60 * 60)
     except Exception as e:
         print("❌ Error in loop:", e)
 
