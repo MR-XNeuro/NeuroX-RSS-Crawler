@@ -146,9 +146,11 @@ if __name__ == "__main__":
     flask_thread.daemon = True
     flask_thread.start()
     loop_runner()
-    @app.route('/crawl-now', methods=["GET"])
+    
+@app.route('/crawl-now', methods=["GET"])
 def trigger_crawler():
     print("📡 Webhook triggered manually")
     main()
     return "✅ Crawler triggered successfully"
+
 
