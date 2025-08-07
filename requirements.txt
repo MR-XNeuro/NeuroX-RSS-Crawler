@@ -3,3 +3,4 @@ python-dotenv
 feedparser
 redis
 beautifulsoup4
+flask
