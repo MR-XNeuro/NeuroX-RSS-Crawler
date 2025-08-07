@@ -105,18 +105,6 @@ def main():
         post = generate_post(text, site)
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
-
-if __name__ == "__main__":
-    try:
-        while True:
-            print(f"⏰ Start Run: {datetime.utcnow().isoformat()}")
-            main()
-            print("🟢 Sleeping for 60 minutes...\n")
-            time.sleep(60 * 60)
-    except Exception as e:
-        print("❌ Error in loop:", e)
-    except KeyboardInterrupt:
-        print("🛑 Manually stopped")
         
 from flask import Flask
 import threading
@@ -130,10 +118,7 @@ def home():
 def run_flask():
     app.run(host="0.0.0.0", port=10000)
 
-if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-
+def loop_runner():
     try:
         while True:
             print(f"⏰ Start Run: {datetime.now(timezone.utc).isoformat()}")
@@ -142,3 +127,12 @@ if __name__ == "__main__":
             time.sleep(60 * 30)
     except Exception as e:
         print("❌ Error in loop:", e)
+
+if __name__ == "__main__":
+    # اجرای Flask روی Thread جدا
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # اجرای حلقه crawler
+    loop_runner()
