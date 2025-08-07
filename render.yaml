@@ -2,11 +2,6 @@ services:
   - type: cron
     name: neurox-crawler-job
     env: python
-    schedule: "*/30 * * * *"
+    schedule: "*/30 * * * *"  # هر 30 دقیقه
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python neurox_crawler.py"
-    autoDeploy: false
-    retry: false
-
-    # ✅ مهم‌ترین بخش ↓
-    preDeployCommand: 'echo Starting job...'
