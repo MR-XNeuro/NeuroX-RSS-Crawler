@@ -310,23 +310,31 @@ def post_to_backendless(data):
 
 def main():
     TARGET_SITES = load_target_sites()
+    if not TARGET_SITES:
+        print("⚠️ No target sites loaded.")
+        return
+
     for site in TARGET_SITES:
         print("🔍 Scraping:", site)
-        text, image_url = extract_text_from_site(site)
-        if not text:
+
+        result = extract_text_from_site(site)
+        if not result or not isinstance(result, tuple):
+            print(f"⚠️ No valid content scraped from {site}")
             continue
+
+        text, image_url = result
+        if not text:
+            print(f"⚠️ Empty content from {site}")
+            continue
+
         content_hash = hashlib.sha256(text.encode()).hexdigest()
         if redis_client.sismember("seen_hashes", content_hash):
             print("⏭️ Duplicate content. Skipping.")
             continue
+
         post = generate_post(text, site, image_url)
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
-
-# === Flask Setup ===
-app = Flask(__name__)
-
-@app.route('/')
 def home():
     return "🟢 NeuroX Crawler Running."
 
