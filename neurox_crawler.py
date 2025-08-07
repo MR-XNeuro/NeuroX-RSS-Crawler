@@ -12,6 +12,7 @@ import random
 import redis
 from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
+import sys
 
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
@@ -87,6 +88,7 @@ def post_to_backendless(data):
         print("❌ Failed to send post:", e)
 
 # --- اجرای اصلی ---
+def main():
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
         print("🔍 Scraping:", site)
@@ -100,9 +102,6 @@ def post_to_backendless(data):
         post = generate_post(text, site)
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
-
-
-import sys
 
 if __name__ == "__main__":
     try:
