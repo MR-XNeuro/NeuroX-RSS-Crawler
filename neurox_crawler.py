@@ -134,6 +134,6 @@ def keep_alive_dummy_server():
 # اجرای سرور در بک‌گراند برای جلوگیری از exit زودهنگام
 threading.Thread(target=keep_alive_dummy_server, daemon=True).start()
 
-# خواب مصنوعی برای 3 دقیقه (یا بیشتر اگه خواستی)
-time.sleep(180)
+# خواب مصنوعی برای 5 دقیقه (یا بیشتر اگه خواستی)
+time.sleep(540)
 print("✅ Graceful exit without failure.")
