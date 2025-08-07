@@ -65,12 +65,9 @@ def extract_text_from_site(url):
         "legalsportsreport.com"
     ]
 
-    def is_heavy_site(target_url):
-    headers_scraperapi = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
-    }
-    
-        return any(domain in target_url for domain in heavy_sites)
+def is_heavy_site(target_url):
+    return any(domain in target_url for domain in heavy_sites)
+
     
     if is_heavy_site(url):
         delay_range = (7, 10)
