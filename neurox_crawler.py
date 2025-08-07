@@ -53,15 +53,21 @@ def extract_text_from_site(url):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
         }
-        response = requests.get(url, headers=headers, timeout=10)
+
+        SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
+        scraper_url = f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}"
+        
+        response = requests.get(scraper_url, headers=headers, timeout=15)
         soup = BeautifulSoup(response.text, "html.parser")
         paragraphs = soup.find_all("p")
         text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
         image_url = extract_image_from_site(soup)
         return text.strip(), image_url
+
     except Exception as e:
         print(f"Error scraping {url}: {e}")
         return None, None
+
 
 def load_promos(file_path="promo_texts.txt"):
     try:
