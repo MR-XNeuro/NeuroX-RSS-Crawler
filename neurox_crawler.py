@@ -1,6 +1,12 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
+# --- Load API keys from environment (required) ---
+SCRAPER_API_KEY = os.getenv('SCRAPER_API_KEY')
+APILAYER_API_KEY = os.getenv('APILAYER_API_KEY')
+if not SCRAPER_API_KEY or not APILAYER_API_KEY:
+    print('⚠️ Warning: SCRAPER_API_KEY or APILAYER_API_KEY not set in environment.')
+
 import cloudscraper
 import requests
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
