@@ -117,5 +117,28 @@ if __name__ == "__main__":
         print("❌ Error in loop:", e)
     except KeyboardInterrupt:
         print("🛑 Manually stopped")
+        
+from flask import Flask
+import threading
 
+app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return "🟢 NeuroX Crawler Running."
+
+def run_flask():
+    app.run(host="0.0.0.0", port=10000)
+
+if __name__ == "__main__":
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    try:
+        while True:
+            print(f"⏰ Start Run: {datetime.now(timezone.utc).isoformat()}")
+            main()
+            print("🟢 Sleeping for 30 minutes...\n")
+            time.sleep(60 * 30)
+    except Exception as e:
+        print("❌ Error in loop:", e)
