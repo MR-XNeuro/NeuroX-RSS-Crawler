@@ -93,18 +93,42 @@ def extract_text_from_site(url):
     random.shuffle(apis)
 
     for api in apis:
-        try:
+        for attempt in range(2):  # retry up to 2 times before fallback
+            try:
+                print(f"🛰️ Trying: {api['name']} (Attempt {attempt+1})")
+                time.sleep(random.uniform(2, 5))
+                if api["method"] == "GET":
+                    response = requests.get(api["url"], headers=api["headers"], timeout=25)
+                else:
+                    response = requests.post(
+                        api["url"],
+                        headers=api["headers"],
+                        json=api.get("data", {}),
+                        timeout=25
+                    )
+                if response.status_code != 200:
+                    raise Exception(f"HTTP {response.status_code}")
+                html = response.text if not api["is_json"] else response.json().get("content", "")
+                soup = BeautifulSoup(html, "html.parser")
+                paragraphs = soup.find_all("p")
+                text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+                image_url = extract_image_from_site(soup)
+                return text.strip(), image_url
+            except Exception as e:
+                print(f"⚠️ Error with {api['name']} (Attempt {attempt+1}) → {e}")
+                continue
+            try:
             print(f"🛰️ Trying: {api['name']}")
             time.sleep(random.uniform(2, 5))
 
             if api["method"] == "GET":
-                response = requests.get(api["url"], headers=api["headers"], timeout=15)
+                response = requests.get(api["url"], headers=api["headers"], timeout=25)
             else:
                 response = requests.post(
                     api["url"],
                     headers=api["headers"],
                     json=api.get("data", {}),
-                    timeout=15
+                    timeout=25
                 )
 
             if response.status_code != 200:
@@ -126,7 +150,7 @@ def extract_text_from_site(url):
         print("☁️ Fallback: Trying cloudscraper...")
         time.sleep(random.uniform(2, 5))
         scraper = cloudscraper.create_scraper()
-        response = scraper.get(url, headers=headers_scraperapi, timeout=15)
+        response = scraper.get(url, headers=headers_scraperapi, timeout=25)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}")
         soup = BeautifulSoup(response.text, "html.parser")
@@ -177,6 +201,18 @@ def post_to_backendless(data):
 def main():
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
+
+        try:
+            head_response = requests.head(site, timeout=10)
+            if head_response.status_code >= 400:
+                print(f"🚫 HEAD check failed for {site} → {head_response.status_code}")
+                continue
+        except Exception as e:
+            print(f"🚫 HEAD request error for {site} → {e}")
+            continue
+        if not site.startswith("http"):
+            print(f"🚫 Skipping invalid URL: {site}")
+            continue
         print("🔍 Scraping:", site)
         text, image_url = extract_text_from_site(site)
         if not text:
