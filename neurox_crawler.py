@@ -49,24 +49,38 @@ def extract_image_from_site(soup):
     return ""
 
 def extract_text_from_site(url):
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
-        }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+    }
 
-        SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
-        scraper_url = f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}"
-        
-        response = requests.get(scraper_url, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, "html.parser")
-        paragraphs = soup.find_all("p")
-        text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
-        image_url = extract_image_from_site(soup)
-        return text.strip(), image_url
+    # کلیدها از متغیرهای محیطی خوانده شوند
+    SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
+    APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
 
-    except Exception as e:
-        print(f"Error scraping {url}: {e}")
-        return None, None
+    # ساخت دو URL
+    api1_url = f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}"
+    api2_url = f"https://api.apilayer.com/scraper?apikey={APILAYER_API_KEY}&url={url}"
+
+    # رندوم انتخاب اولیه
+    urls = [api1_url, api2_url]
+    random.shuffle(urls)
+
+    # تلاش برای خزش از یکی از دو API
+    for scraper_url in urls:
+        try:
+            response = requests.get(scraper_url, headers=headers, timeout=15)
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}")
+            soup = BeautifulSoup(response.text, "html.parser")
+            paragraphs = soup.find_all("p")
+            text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+            image_url = extract_image_from_site(soup)
+            return text.strip(), image_url
+        except Exception as e:
+            print(f"⚠️ Error scraping via {scraper_url}: {e}")
+            continue  # امتحان بعدی
+
+    return None, None  # اگر هر دو شکست خوردن
 
 
 def load_promos(file_path="promo_texts.txt"):
