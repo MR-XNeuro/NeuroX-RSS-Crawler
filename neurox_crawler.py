@@ -1,7 +1,7 @@
+
 import os
 from dotenv import load_dotenv
 load_dotenv()
-
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,16 +14,25 @@ from datetime import datetime, timedelta
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
 BACKENDLESS_API_KEY = os.getenv("BACKENDLESS_API_KEY")
+BACKENDLESS_API_URL = os.getenv("BACKENDLESS_API_URL")
 BACKENDLESS_TABLE = "Posts"
-API_URL = f"{os.getenv("BACKENDLESS_API_URL")}/{BACKENDLESS_APP_ID}/{BACKENDLESS_API_KEY}/data/{BACKENDLESS_TABLE}"
-
-TARGET_SITES = [
-    "https://www.example.com/articles/gambling-risks",
-    "https://www.example.org/blog/the-dangers-of-betting"
-]
+API_URL = f"{BACKENDLESS_API_URL}/{BACKENDLESS_APP_ID}/{BACKENDLESS_API_KEY}/data/{BACKENDLESS_TABLE}"
 
 SEEN_HASHES_FILE = "seen_hashes.json"
+TARGET_SITES_FILE = "target_sites.txt"
 
+PLATFORMS = ["WordPress", "Blogspot", "Tumblr", "X"]
+
+# --- لود کردن لینک‌های هدف ---
+def load_target_sites():
+    try:
+        with open(TARGET_SITES_FILE, "r", encoding="utf-8") as f:
+            return [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        print("⚠️ Failed to load target sites:", e)
+        return []
+
+# --- لود کردن پست‌های قبلی ---
 def load_seen_hashes():
     try:
         with open(SEEN_HASHES_FILE, "r") as f:
@@ -35,6 +44,7 @@ def save_seen_hashes(hashes):
     with open(SEEN_HASHES_FILE, "w") as f:
         json.dump(list(hashes), f)
 
+# --- استخراج متن از سایت ---
 def extract_text_from_site(url):
     try:
         response = requests.get(url, timeout=10)
@@ -46,8 +56,7 @@ def extract_text_from_site(url):
         print(f"Error scraping {url}: {e}")
         return None
 
-
-# --- Load promotional texts ---
+# --- لود تبلیغات ---
 def load_promos(file_path="promo_texts.txt"):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -59,44 +68,47 @@ def load_promos(file_path="promo_texts.txt"):
 
 PROMO_LINES = load_promos()
 
-
-    promo_text = "\n\n🔗 Learn how to defeat betting systems with the NeuroX AI bot:\nhttps://mr-xneuro.github.io/neurobet-demo/"
+# --- تولید پست برای Backendless ---
+def generate_post(text, source_url):
+    promo = random.choice(PROMO_LINES) if PROMO_LINES else ""
+    platform = random.choice(PLATFORMS)
     return {
         "title": "Betting Risk Exposed",
-        "description": text + promo_text,
+        "description": text + "\n\n" + promo,
         "imageUrl": "",
-        "targetPlatform": "WordPress",
+        "sourceUrl": source_url,
+        "targetPlatform": platform,
         "scheduledAt": (datetime.utcnow() + timedelta(minutes=random.randint(5, 60))).strftime("%Y-%m-%d %H:%M:%S"),
         "status": "scheduled",
         "createdAt": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         "updatedAt": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     }
 
+# --- ارسال پست ---
 def post_to_backendless(data):
     try:
         r = requests.post(API_URL, json=data)
         r.raise_for_status()
-        print("✅ Sent:", data["title"])
+        print("✅ Sent to Backendless:", data["title"], "→", data["targetPlatform"])
     except Exception as e:
         print("❌ Failed to send post:", e)
 
+# --- اجرای اصلی ---
 def main():
     seen = load_seen_hashes()
+    TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
         print("🔍 Scraping:", site)
         text = extract_text_from_site(site)
         if not text:
             continue
-
         content_hash = hashlib.sha256(text.encode()).hexdigest()
         if content_hash in seen:
             print("⏭️ Duplicate content. Skipping.")
             continue
-
         post = generate_post(text, site)
         post_to_backendless(post)
         seen.add(content_hash)
-
     save_seen_hashes(seen)
 
 if __name__ == "__main__":
