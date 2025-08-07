@@ -117,11 +117,21 @@ app = Flask(__name__)
 def home():
     return "🟢 NeuroX Crawler Running."
 
+from threading import Thread
+
 @app.route('/crawl-now', methods=["GET"])
 def trigger_crawler():
     print("📡 Manual crawl triggered")
-    main()
-    return "✅ Crawler triggered successfully"
+
+    def async_crawl():
+        try:
+            main()
+            print("✅ Manual crawl completed")
+        except Exception as e:
+            print("❌ Error during manual crawl:", e)
+
+    Thread(target=async_crawl).start()
+    return "✅ Crawling started!"
 
 if __name__ == "__main__":
     import threading
