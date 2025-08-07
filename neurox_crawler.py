@@ -90,17 +90,6 @@ def post_to_backendless(data):
     except Exception as e:
         print("❌ Failed to send post:", e)
 
-# --- سرور ساختگی برای زنده نگه داشتن برنامه ---
-def keep_alive_dummy_server():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('0.0.0.0', 10000))
-        s.listen(1)
-        print("🟢 Dummy server started to keep Render happy.")
-        s.accept()
-    except Exception as e:
-        print("⚠️ Dummy server error:", e)
-
 # --- اجرای اصلی ---
 def main():
     TARGET_SITES = load_target_sites()
@@ -118,18 +107,13 @@ def main():
         redis_client.sadd("seen_hashes", content_hash)
 
 if __name__ == "__main__":
-    exit_code = 0
-
     try:
         main()
         print("✅ Done.")
+        exit_code = 0
     except Exception as e:
         print("❌ Unhandled exception:", e)
         exit_code = 1
 
-    threading.Thread(target=keep_alive_dummy_server, daemon=True).start()
-    print("⏳ Keeping alive for Render...")
-    time.sleep(540)
-    print("✅ Graceful exit without failure.")
     print("🟢 Graceful shutdown.")
     sys.exit(exit_code)
