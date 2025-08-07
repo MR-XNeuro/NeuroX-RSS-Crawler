@@ -7,6 +7,5 @@ services:
     startCommand: "python neurox_crawler.py"
     autoDeploy: false
     retry: false
-
-    # ✅ مهم‌ترین بخش ↓
-    preDeployCommand: 'echo Starting job...'
+    preDeployCommand: "echo Starting..."
+    postDeployCommand: "echo ✅ Job completed successfully."
