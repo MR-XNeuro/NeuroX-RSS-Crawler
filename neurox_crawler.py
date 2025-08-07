@@ -114,3 +114,6 @@ if __name__ == "__main__":
         print("❌ Unhandled exception:", e)
         time.sleep(2)
         sys.exit(1)    # خطا واقعی
+finally:
+    print("🟢 Graceful shutdown.")
+    sys.exit(0)
