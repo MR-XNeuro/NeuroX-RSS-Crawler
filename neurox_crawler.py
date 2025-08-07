@@ -108,12 +108,14 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
-        print("✅ Done.")
-        exit_code = 0
+        while True:
+            print(f"⏰ Start Run: {datetime.utcnow().isoformat()}")
+            main()
+            print("🟢 Sleeping for 60 minutes...\n")
+            time.sleep(60 * 60)
     except Exception as e:
-        print("❌ Unhandled exception:", e)
-        exit_code = 1
+        print("❌ Error in loop:", e)
+    except KeyboardInterrupt:
+        print("🛑 Manually stopped")
 
-    print("🟢 Graceful shutdown.")
-    sys.exit(exit_code)
+
