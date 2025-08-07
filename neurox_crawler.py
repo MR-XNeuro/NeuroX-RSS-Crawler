@@ -1,22 +1,18 @@
-
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
 import requests
-from bs4 import XMLParsedAsHTMLWarning
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import warnings
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
-from bs4 import BeautifulSoup
+
 import hashlib
 import random
 import redis
 from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
-import sys
 import time
-import socket
-import threading
 from flask import Flask
 
 # === تنظیمات ===
@@ -29,11 +25,9 @@ API_URL = f"{BACKENDLESS_API_URL}/{BACKENDLESS_APP_ID}/{BACKENDLESS_API_KEY}/dat
 TARGET_SITES_FILE = "target_sites.txt"
 PLATFORMS = ["WordPress", "Blogspot", "Tumblr", "X"]
 
-# --- اتصال به Redis با استفاده از REDIS_URL از .env ---
 REDIS_URL = os.getenv("REDIS_URL")
 redis_client = redis.Redis.from_url(REDIS_URL, connection_class=SSLConnection)
 
-# --- لود کردن لینک‌های هدف ---
 def load_target_sites():
     try:
         with open(TARGET_SITES_FILE, "r", encoding="utf-8") as f:
@@ -42,7 +36,6 @@ def load_target_sites():
         print("⚠️ Failed to load target sites:", e)
         return []
 
-# --- استخراج تصویر از سایت ---
 def extract_image_from_site(soup):
     og_img = soup.find("meta", property="og:image")
     if og_img and og_img.get("content"):
@@ -55,7 +48,6 @@ def extract_image_from_site(soup):
         return img["src"]
     return ""
 
-# --- استخراج متن از سایت ---
 def extract_text_from_site(url):
     try:
         response = requests.get(url, timeout=10)
@@ -68,7 +60,6 @@ def extract_text_from_site(url):
         print(f"Error scraping {url}: {e}")
         return None, None
 
-# --- لود تبلیغات ---
 def load_promos(file_path="promo_texts.txt"):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -80,7 +71,6 @@ def load_promos(file_path="promo_texts.txt"):
 
 PROMO_LINES = load_promos()
 
-# --- تولید پست برای Backendless ---
 def generate_post(text, source_url, image_url=""):
     promo = random.choice(PROMO_LINES) if PROMO_LINES else ""
     platform = random.choice(PLATFORMS)
@@ -97,7 +87,6 @@ def generate_post(text, source_url, image_url=""):
         "updatedAt": now.strftime("%Y-%m-%d %H:%M:%S")
     }
 
-# --- ارسال پست ---
 def post_to_backendless(data):
     try:
         r = requests.post(API_URL, json=data)
@@ -106,7 +95,6 @@ def post_to_backendless(data):
     except Exception as e:
         print("❌ Failed to send post:", e)
 
-# --- اجرای اصلی ---
 def main():
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
@@ -122,35 +110,37 @@ def main():
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
 
+# === Flask Setup ===
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "🟢 NeuroX Crawler Running."
 
-def run_flask():
-    app.run(host="0.0.0.0", port=10000)
-
-def loop_runner():
-    try:
-        while True:
-            print(f"⏰ Start Run: {datetime.now(timezone.utc).isoformat()}")
-            main()
-            print("🟢 Sleeping for 30 minutes...\n")
-            time.sleep(60 * 60)
-    except Exception as e:
-        print("❌ Error in loop:", e)
-
-if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-    loop_runner()
-    
 @app.route('/crawl-now', methods=["GET"])
 def trigger_crawler():
-    print("📡 Webhook triggered manually")
+    print("📡 Manual crawl triggered")
     main()
     return "✅ Crawler triggered successfully"
 
+if __name__ == "__main__":
+    import threading
 
+    def run_flask():
+        app.run(host="0.0.0.0", port=10000)
+
+    def loop_runner():
+        try:
+            while True:
+                print(f"⏰ Auto Run: {datetime.now(timezone.utc).isoformat()}")
+                main()
+                print("🟢 Sleeping for 1 hour...\n")
+                time.sleep(60 * 60)
+        except Exception as e:
+            print("❌ Error in loop:", e)
+
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    loop_runner()
