@@ -2,3 +2,4 @@ requests
 python-dotenv
 feedparser
 redis
+beautifulsoup4
