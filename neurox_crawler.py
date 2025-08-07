@@ -39,6 +39,7 @@ from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
 import time
 from flask import Flask
+app = Flask(__name__)
 
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
