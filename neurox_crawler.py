@@ -7,6 +7,25 @@ from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import warnings
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
+# لیست سایت‌های سنگین که delay بیشتری لازم دارند
+HEAVY_SITES = ["decrypt.co", "marketwatch.com", "bitcoinmagazine.com"]
+
+# لیست سایت‌هایی که با یک API بهتر کار می‌کنند
+API_PREFERENCE = {
+    "cointelegraph.com": "scraperapi",
+    "psychologytoday.com": "scraperapi",
+    "verywellmind.com": "scraperapi",
+    "fool.com": "scraperapi",
+}
+
+# User-Agent های واقعی و انسانی (موبایل + دسکتاپ Safari و Chrome)
+USER_AGENTS = [
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 15_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_3_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+]
+
+
 import hashlib
 import random
 import redis
@@ -50,21 +69,132 @@ def extract_image_from_site(soup):
 
 def extract_text_from_site(url):
     import time
-    import random
     import requests
-    import os
-    from bs4 import BeautifulSoup
     import cloudscraper
+    from bs4 import BeautifulSoup
+    from urllib.parse import urlparse
 
-    SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
-    APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
+    domain = urlparse(url).netloc.replace("www.", "")
 
-    if not SCRAPER_API_KEY or not APILAYER_API_KEY:
-        print("❌ API keys not found in environment variables.")
+    # تعیین User-Agent تصادفی از لیست
+    chosen_ua = random.choice(USER_AGENTS)
+
+    headers_scraperapi = {
+        "User-Agent": chosen_ua
+    }
+
+    headers_apilayer = {
+        "Content-Type": "application/json",
+        "apikey": APILAYER_API_KEY,
+        "User-Agent": chosen_ua
+    }
+
+    # تأخیر داینامیک برای سایت‌های سنگین
+    delay = random.uniform(4, 7) if domain in HEAVY_SITES else random.uniform(2, 4)
+
+    # اگر ترجیح API مشخص شده باشد
+    preferred_api = API_PREFERENCE.get(domain)
+
+    apis = []
+    if preferred_api == "scraperapi":
+        apis = [
+            {
+                "name": "scraperapi",
+                "method": "GET",
+                "url": f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}",
+                "headers": headers_scraperapi,
+                "is_json": False
+            },
+            {
+                "name": "apilayer",
+                "method": "POST",
+                "url": "https://api.apilayer.com/scraper",
+                "headers": headers_apilayer,
+                "data": {"url": url},
+                "is_json": True
+            }
+        ]
+    elif preferred_api == "apilayer":
+        apis = [
+            {
+                "name": "apilayer",
+                "method": "POST",
+                "url": "https://api.apilayer.com/scraper",
+                "headers": headers_apilayer,
+                "data": {"url": url},
+                "is_json": True
+            },
+            {
+                "name": "scraperapi",
+                "method": "GET",
+                "url": f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}",
+                "headers": headers_scraperapi,
+                "is_json": False
+            }
+        ]
+    else:
+        apis = [
+            {
+                "name": "scraperapi",
+                "method": "GET",
+                "url": f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}",
+                "headers": headers_scraperapi,
+                "is_json": False
+            },
+            {
+                "name": "apilayer",
+                "method": "POST",
+                "url": "https://api.apilayer.com/scraper",
+                "headers": headers_apilayer,
+                "data": {"url": url},
+                "is_json": True
+            }
+        ]
+
+    def extract_image_from_site(soup):
+        img = soup.find("img")
+        return img["src"] if img and img.has_attr("src") else None
+
+    for api in apis:
+        try:
+            print(f"🛰️ Trying: {api['name']}")
+            time.sleep(delay)
+            if api["method"] == "GET":
+                response = requests.get(api["url"], headers=api["headers"], timeout=15)
+            else:
+                response = requests.post(api["url"], headers=api["headers"], json=api.get("data", {}), timeout=15)
+            if response.status_code != 200:
+                raise Exception(f"HTTP {response.status_code}")
+            html = response.text if not api["is_json"] else response.json().get("content", "")
+            soup = BeautifulSoup(html, "html.parser")
+            paragraphs = soup.find_all("p")
+            text = "
+".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+            image_url = extract_image_from_site(soup)
+            return text.strip(), image_url
+        except Exception:
+            continue
+
+    # fallback به cloudscraper در صورت شکست نهایی
+    try:
+        print("☁️ Fallback: Trying cloudscraper...")
+        time.sleep(delay)
+        scraper = cloudscraper.create_scraper()
+        response = scraper.get(url, headers={"User-Agent": chosen_ua}, timeout=15)
+        if response.status_code != 200:
+            raise Exception(f"HTTP {response.status_code}")
+        soup = BeautifulSoup(response.text, "html.parser")
+        paragraphs = soup.find_all("p")
+        text = "
+".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+        image_url = extract_image_from_site(soup)
+        return text.strip(), image_url
+    except Exception as e:
+        print(f"❌ All scraping methods failed for {url}: {e}")
         return None, None
 
     headers_scraperapi = {
-        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Mobile/15E148 Safari/604.1"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
     }
 
     headers_apilayer = {
@@ -233,30 +363,3 @@ if __name__ == "__main__":
     flask_thread.start()
 
     loop_runner()
-
-
-
-
-# بررسی سایت‌های سنگین
-HEAVY_SITES = [
-    "decrypt.co", "cointelegraph.com", "marketwatch.com", "bitcoinmagazine.com",
-    "psychologytoday.com", "verywellmind.com", "coindesk.com"
-]
-
-# لیست سفید API برای بعضی سایت‌ها
-API_WHITELIST = {
-    "scraperapi": ["coindesk.com", "marketwatch.com", "igamingbusiness.com"],
-    "apilayer": ["verywellmind.com", "begambleaware.org"]
-}
-
-def is_heavy_site(url):
-    for site in HEAVY_SITES:
-        if site in url:
-            return True
-    return False
-
-def get_preferred_api(url):
-    for api, sites in API_WHITELIST.items():
-        if any(site in url for site in sites):
-            return api
-    return None
