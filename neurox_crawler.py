@@ -342,8 +342,9 @@ def home():
 from threading import Thread
 
 @app.route('/crawl-now', methods=["GET"])
-def trigger_crawler():
-    print("📡 Manual crawl triggered")
+def crawl_now():
+    threading.Thread(target=main).start()
+    return "📡 Manual crawl triggered"
 
     def async_crawl():
         try:
