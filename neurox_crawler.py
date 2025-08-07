@@ -49,19 +49,33 @@ def extract_image_from_site(soup):
     return ""
 
 def extract_text_from_site(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+    import time
+    import random
+    import os
+
+    headers_scraperapi = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
+    }
+
+    headers_apilayer = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0",
+        "Referer": "https://www.google.com",
+        "Content-Type": "application/json",
+        "apikey": os.getenv("APILAYER_API_KEY")
     }
 
     SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
     APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
 
-    api1_url = f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}"
-    api2_url = f"https://api.apilayer.com/scraper?apikey={APILAYER_API_KEY}&url={url}"
-    urls = [api1_url, api2_url]
+    urls = [
+        {"url": f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}", "headers": headers_scraperapi},
+        {"url": f"https://api.apilayer.com/scraper?url={url}", "headers": headers_apilayer}
+    ]
     random.shuffle(urls)
 
-    for scraper_url in urls:
+    for item in urls:
+        scraper_url = item["url"]
+        headers = item["headers"]
         try:
             print(f"🛰️ Trying: {scraper_url}")
             time.sleep(random.uniform(2, 5))  # تأخیر قبل از هر ریکوئست
@@ -82,7 +96,7 @@ def extract_text_from_site(url):
         print("☁️ Fallback: Trying cloudscraper...")
         time.sleep(random.uniform(2, 5))
         scraper = cloudscraper.create_scraper()
-        response = scraper.get(url, headers=headers, timeout=15)
+        response = scraper.get(url, headers=headers_scraperapi, timeout=15)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}")
         soup = BeautifulSoup(response.text, "html.parser")
