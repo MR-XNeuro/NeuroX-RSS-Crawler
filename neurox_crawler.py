@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import hashlib
 import random
-import redis
+from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
 
 # === تنظیمات ===
@@ -21,7 +21,7 @@ PLATFORMS = ["WordPress", "Blogspot", "Tumblr", "X"]
 
 # --- اتصال به Redis با استفاده از REDIS_URL از .env ---
 REDIS_URL = os.getenv("REDIS_URL")
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True, ssl=True)
+redis_client = redis.Redis.from_url(REDIS_URL, connection_class=SSLConnection)
 
 # --- لود کردن لینک‌های هدف ---
 def load_target_sites():
