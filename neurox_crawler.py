@@ -117,35 +117,10 @@ def extract_text_from_site(url):
             except Exception as e:
                 print(f"⚠️ Error with {api['name']} (Attempt {attempt+1}) → {e}")
                 continue
-            try:
-            print(f"🛰️ Trying: {api['name']}")
-            time.sleep(random.uniform(2, 5))
 
-            if api["method"] == "GET":
-                response = requests.get(api["url"], headers=api["headers"], timeout=25)
-            else:
-                response = requests.post(
-                    api["url"],
-                    headers=api["headers"],
-                    json=api.get("data", {}),
-                    timeout=25
-                )
 
-            if response.status_code != 200:
-                raise Exception(f"HTTP {response.status_code}")
+    # Fallback to cloudscraper below was preserved.
 
-            html = response.text if not api["is_json"] else response.json().get("content", "")
-            soup = BeautifulSoup(html, "html.parser")
-            paragraphs = soup.find_all("p")
-            text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
-            image_url = extract_image_from_site(soup)
-            return text.strip(), image_url
-
-        except Exception as e:
-            print(f"⚠️ Error with {api['name']} → {e}")
-            continue
-
-    # Fallback به cloudscraper
     try:
         print("☁️ Fallback: Trying cloudscraper...")
         time.sleep(random.uniform(2, 5))
