@@ -184,8 +184,7 @@ def extract_text_from_site(url):
             raise Exception(f"HTTP {response.status_code}")
         soup = BeautifulSoup(response.text, "html.parser")
         paragraphs = soup.find_all("p")
-        text = "
-".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+        text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
         image_url = extract_image_from_site(soup)
         return text.strip(), image_url
     except Exception as e:
