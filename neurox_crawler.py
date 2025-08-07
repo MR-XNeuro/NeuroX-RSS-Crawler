@@ -205,20 +205,31 @@ def main():
         except Exception as e:
             print(f"🚫 HEAD request error for {site} → {e}")
             continue
+
         if not site.startswith("http"):
             print(f"🚫 Skipping invalid URL: {site}")
             continue
+
         print("🔍 Scraping:", site)
-        text, image_url = extract_text_from_site(site)
+        result = extract_text_from_site(site)
+
+        if not result or not isinstance(result, tuple):
+            continue
+
+        text, image_url = result
+
         if not text:
             continue
+
         content_hash = hashlib.sha256(text.encode()).hexdigest()
         if redis_client.sismember("seen_hashes", content_hash):
             print("⏭️ Duplicate content. Skipping.")
             continue
+
         post = generate_post(text, site, image_url)
         post_to_backendless(post)
         redis_client.sadd("seen_hashes", content_hash)
+
 
 # === Flask Setup ===
 app = Flask(__name__)
