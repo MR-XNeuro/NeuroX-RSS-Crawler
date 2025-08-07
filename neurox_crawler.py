@@ -6,9 +6,9 @@ load_dotenv()
 import requests
 from bs4 import BeautifulSoup
 import hashlib
-import json
 import random
 import time
+import redis
 from datetime import datetime, timedelta
 
 # === تنظیمات ===
@@ -18,10 +18,11 @@ BACKENDLESS_API_URL = os.getenv("BACKENDLESS_API_URL")
 BACKENDLESS_TABLE = "Posts"
 API_URL = f"{BACKENDLESS_API_URL}/{BACKENDLESS_APP_ID}/{BACKENDLESS_API_KEY}/data/{BACKENDLESS_TABLE}"
 
-SEEN_HASHES_FILE = "seen_hashes.json"
 TARGET_SITES_FILE = "target_sites.txt"
-
 PLATFORMS = ["WordPress", "Blogspot", "Tumblr", "X"]
+
+# --- اتصال به Redis Upstash ---
+redis_client = redis.Redis.from_url("redis://default:ARaiAAIjcDEzNDNjZmM4OTIzNGU0OWVjYTUyNDE2NTI1Mzg4MjhhOXAxMA@moving-beetle-5794.upstash.io:6379", decode_responses=True)
 
 # --- لود کردن لینک‌های هدف ---
 def load_target_sites():
@@ -31,18 +32,6 @@ def load_target_sites():
     except Exception as e:
         print("⚠️ Failed to load target sites:", e)
         return []
-
-# --- لود کردن پست‌های قبلی ---
-def load_seen_hashes():
-    try:
-        with open(SEEN_HASHES_FILE, "r") as f:
-            return set(json.load(f))
-    except:
-        return set()
-
-def save_seen_hashes(hashes):
-    with open(SEEN_HASHES_FILE, "w") as f:
-        json.dump(list(hashes), f)
 
 # --- استخراج متن از سایت ---
 def extract_text_from_site(url):
@@ -95,7 +84,6 @@ def post_to_backendless(data):
 
 # --- اجرای اصلی ---
 def main():
-    seen = load_seen_hashes()
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
         print("🔍 Scraping:", site)
@@ -103,13 +91,12 @@ def main():
         if not text:
             continue
         content_hash = hashlib.sha256(text.encode()).hexdigest()
-        if content_hash in seen:
+        if redis_client.sismember("seen_hashes", content_hash):
             print("⏭️ Duplicate content. Skipping.")
             continue
         post = generate_post(text, site)
         post_to_backendless(post)
-        seen.add(content_hash)
-    save_seen_hashes(seen)
+        redis_client.sadd("seen_hashes", content_hash)
 
 if __name__ == "__main__":
     main()
