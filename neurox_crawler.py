@@ -50,7 +50,10 @@ def extract_image_from_site(soup):
 
 def extract_text_from_site(url):
     try:
-        response = requests.get(url, timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.text, "html.parser")
         paragraphs = soup.find_all("p")
         text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
