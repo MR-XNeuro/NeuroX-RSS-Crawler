@@ -21,8 +21,9 @@ API_URL = f"{BACKENDLESS_API_URL}/{BACKENDLESS_APP_ID}/{BACKENDLESS_API_KEY}/dat
 TARGET_SITES_FILE = "target_sites.txt"
 PLATFORMS = ["WordPress", "Blogspot", "Tumblr", "X"]
 
-# --- اتصال به Redis Upstash ---
-redis_client = redis.Redis.from_url("redis://default:ARaiAAIjcDEzNDNjZmM4OTIzNGU0OWVjYTUyNDE2NTI1Mzg4MjhhOXAxMA@moving-beetle-5794.upstash.io:6379", decode_responses=True)
+# --- اتصال به Redis با استفاده از REDIS_URL از .env ---
+REDIS_URL = os.getenv("REDIS_URL")
+redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
 # --- لود کردن لینک‌های هدف ---
 def load_target_sites():
