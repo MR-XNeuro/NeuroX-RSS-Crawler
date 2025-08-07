@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import requests
+from bs4 import XMLParsedAsHTMLWarning
+import warnings
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 from bs4 import BeautifulSoup
 import hashlib
 import random
