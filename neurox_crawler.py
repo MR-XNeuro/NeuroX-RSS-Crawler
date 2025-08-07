@@ -56,6 +56,24 @@ def extract_text_from_site(url):
     from bs4 import BeautifulSoup
     import cloudscraper
 
+
+    heavy_sites = [
+        "decrypt.co", "cointelegraph.com", "marketwatch.com",
+        "verywellmind.com", "casino.org", "psychologytoday.com",
+        "tradingview.com", "beincrypto.com", "bitcoinmagazine.com",
+        "fxstreet.com", "cryptopotato.com", "fool.com", "cardschat.com",
+        "legalsportsreport.com"
+    ]
+
+    def is_heavy_site(target_url):
+        return any(domain in target_url for domain in heavy_sites)
+
+    if is_heavy_site(url):
+        delay_range = (7, 10)
+        headers_scraperapi["User-Agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15"
+    else:
+        delay_range = (2, 4)
+
     SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
     APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
 
@@ -96,7 +114,7 @@ def extract_text_from_site(url):
         for attempt in range(2):  # retry up to 2 times before fallback
             try:
                 print(f"🛰️ Trying: {api['name']} (Attempt {attempt+1})")
-                time.sleep(random.uniform(2, 5))
+                time.sleep(random.uniform(*delay_range))
                 if api["method"] == "GET":
                     response = requests.get(api["url"], headers=api["headers"], timeout=25)
                 else:
@@ -123,7 +141,7 @@ def extract_text_from_site(url):
 
     try:
         print("☁️ Fallback: Trying cloudscraper...")
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(*delay_range))
         scraper = cloudscraper.create_scraper()
         response = scraper.get(url, headers=headers_scraperapi, timeout=25)
         if response.status_code != 200:
