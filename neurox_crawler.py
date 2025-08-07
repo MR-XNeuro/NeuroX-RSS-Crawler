@@ -105,15 +105,16 @@ def main():
         redis_client.sadd("seen_hashes", content_hash)
 
 if __name__ == "__main__":
+    exit_code = 0  # فرض بر موفقیت
+
     try:
         main()
         print("✅ Done.")
-        time.sleep(3)  # زمان برای ثبت لاگ‌ها
-        sys.exit(0)    # موفقیت کامل
+        time.sleep(2)
     except Exception as e:
         print("❌ Unhandled exception:", e)
+        exit_code = 1  # خطا رخ داده
         time.sleep(2)
-        sys.exit(1)    # خطا واقعی
-finally:
-    print("🟢 Graceful shutdown.")
-    sys.exit(0)
+    finally:
+        print("🟢 Graceful shutdown.")
+        sys.exit(exit_code)
