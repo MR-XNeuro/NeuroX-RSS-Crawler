@@ -49,13 +49,6 @@ def extract_image_from_site(soup):
     return ""
 
 def extract_text_from_site(url):
-    import time
-    import random
-    import requests
-    import os
-    from bs4 import BeautifulSoup
-    import cloudscraper
-
 
     heavy_sites = [
         "decrypt.co", "cointelegraph.com", "marketwatch.com",
