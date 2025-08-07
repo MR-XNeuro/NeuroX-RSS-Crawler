@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -7,9 +6,8 @@ import requests
 from bs4 import BeautifulSoup
 import hashlib
 import random
-import time
 import redis
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # === تنظیمات ===
 BACKENDLESS_APP_ID = os.getenv("BACKENDLESS_APP_ID")
@@ -23,7 +21,7 @@ PLATFORMS = ["WordPress", "Blogspot", "Tumblr", "X"]
 
 # --- اتصال به Redis با استفاده از REDIS_URL از .env ---
 REDIS_URL = os.getenv("REDIS_URL")
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True, ssl=True)
 
 # --- لود کردن لینک‌های هدف ---
 def load_target_sites():
@@ -62,16 +60,17 @@ PROMO_LINES = load_promos()
 def generate_post(text, source_url):
     promo = random.choice(PROMO_LINES) if PROMO_LINES else ""
     platform = random.choice(PLATFORMS)
+    now = datetime.now(timezone.utc)
     return {
         "title": "Betting Risk Exposed",
         "description": text + "\n\n" + promo,
         "imageUrl": "",
         "sourceUrl": source_url,
         "targetPlatform": platform,
-        "scheduledAt": (datetime.utcnow() + timedelta(minutes=random.randint(5, 60))).strftime("%Y-%m-%d %H:%M:%S"),
+        "scheduledAt": (now + timedelta(minutes=random.randint(5, 60))).strftime("%Y-%m-%d %H:%M:%S"),
         "status": "scheduled",
-        "createdAt": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        "updatedAt": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        "createdAt": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "updatedAt": now.strftime("%Y-%m-%d %H:%M:%S")
     }
 
 # --- ارسال پست ---
