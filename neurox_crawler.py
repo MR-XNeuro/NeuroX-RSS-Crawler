@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import hashlib
 import random
+import redis
 from redis.connection import SSLConnection
 from datetime import datetime, timedelta, timezone
 
