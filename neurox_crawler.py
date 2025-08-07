@@ -51,47 +51,77 @@ def extract_image_from_site(soup):
 def extract_text_from_site(url):
     import time
     import random
+    import requests
     import os
+    from bs4 import BeautifulSoup
+    import cloudscraper
+
+    SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
+    APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
+
+    if not SCRAPER_API_KEY or not APILAYER_API_KEY:
+        print("❌ API keys not found in environment variables.")
+        return None, None
 
     headers_scraperapi = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
     }
 
     headers_apilayer = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0",
-        "Referer": "https://www.google.com",
         "Content-Type": "application/json",
-        "apikey": os.getenv("APILAYER_API_KEY")
+        "apikey": APILAYER_API_KEY
     }
 
-    SCRAPER_API_KEY = os.getenv("SCRAPER_API_KEY")
-    APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
-
-    urls = [
-        {"url": f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}", "headers": headers_scraperapi},
-        {"url": f"https://api.apilayer.com/scraper?url={url}", "headers": headers_apilayer}
+    apis = [
+        {
+            "name": "scraperapi",
+            "method": "GET",
+            "url": f"https://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}",
+            "headers": headers_scraperapi,
+            "is_json": False
+        },
+        {
+            "name": "apilayer",
+            "method": "POST",
+            "url": "https://api.apilayer.com/scraper",
+            "headers": headers_apilayer,
+            "data": {"url": url},
+            "is_json": True
+        }
     ]
-    random.shuffle(urls)
 
-    for item in urls:
-        scraper_url = item["url"]
-        headers = item["headers"]
+    random.shuffle(apis)
+
+    for api in apis:
         try:
-            print(f"🛰️ Trying: {scraper_url}")
-            time.sleep(random.uniform(2, 5))  # تأخیر قبل از هر ریکوئست
-            response = requests.get(scraper_url, headers=headers, timeout=15)
+            print(f"🛰️ Trying: {api['name']}")
+            time.sleep(random.uniform(2, 5))
+
+            if api["method"] == "GET":
+                response = requests.get(api["url"], headers=api["headers"], timeout=15)
+            else:
+                response = requests.post(
+                    api["url"],
+                    headers=api["headers"],
+                    json=api.get("data", {}),
+                    timeout=15
+                )
+
             if response.status_code != 200:
                 raise Exception(f"HTTP {response.status_code}")
-            soup = BeautifulSoup(response.text, "html.parser")
+
+            html = response.text if not api["is_json"] else response.json().get("content", "")
+            soup = BeautifulSoup(html, "html.parser")
             paragraphs = soup.find_all("p")
             text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
             image_url = extract_image_from_site(soup)
             return text.strip(), image_url
+
         except Exception as e:
-            print(f"⚠️ Error with API URL: {scraper_url} → {e}")
+            print(f"⚠️ Error with {api['name']} → {e}")
             continue
 
-    # اگر هر دو API شکست خوردن، از cloudscraper استفاده کن
+    # Fallback به cloudscraper
     try:
         print("☁️ Fallback: Trying cloudscraper...")
         time.sleep(random.uniform(2, 5))
@@ -107,6 +137,7 @@ def extract_text_from_site(url):
     except Exception as e:
         print(f"❌ All scraping methods failed for {url}: {e}")
         return None, None
+
 
 def load_promos(file_path="promo_texts.txt"):
     try:
