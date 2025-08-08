@@ -128,6 +128,15 @@ def extract_text_from_site(url):
     except Exception as e:
         print(f"❌ Exception in extract_text_from_site → {e}")
         return None
+        
+# 📄 Load target URLs
+def load_target_sites():
+    try:
+        with open("target_sites.txt", "r") as file:
+            return [line.strip() for line in file if line.strip()]
+    except Exception as e:
+        print(f"❌ Failed to load target sites: {e}")
+        return []
 
 # 🚀 Main runner
 def main():
