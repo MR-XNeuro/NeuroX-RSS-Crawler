@@ -1,6 +1,5 @@
 
 from flask import Flask
-from threading import Thread
 import time
 from datetime import datetime, timezone
 import requests
@@ -36,15 +35,13 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_3_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
 ]
 
-# 📄 Load target URLs
+# 📤 Send to Backendless
 def post_to_backendless(post):
     try:
-        # Backendless config
         APP_ID = os.getenv("BACKENDLESS_APP_ID")
-        API_KEY = os.getenv("BACKENDLESS_API_KEY")  # REST API Key
+        API_KEY = os.getenv("BACKENDLESS_API_KEY")
         BASE_URL = f"https://api.backendless.com/{APP_ID}/{API_KEY}/data/Posts"
 
-        # Payload
         payload = {
             "title": post["title"],
             "description": post["content"],
@@ -53,12 +50,9 @@ def post_to_backendless(post):
             "platform": post["platform"]
         }
 
-        headers = {
-            "Content-Type": "application/json"
-        }
-
+        headers = {"Content-Type": "application/json"}
         response = requests.post(BASE_URL, headers=headers, data=json.dumps(payload))
-        
+
         if response.status_code < 300:
             print(f"✅ Sent to Backendless: {post['title']}")
         else:
@@ -67,7 +61,6 @@ def post_to_backendless(post):
     except Exception as e:
         print(f"❌ Exception sending to Backendless: {e}")
 
-# 🧠 Generate post object
 def generate_post(text, url, image_url=None):
     return {
         "title": "Betting Risk Exposed",
@@ -77,13 +70,11 @@ def generate_post(text, url, image_url=None):
         "image": image_url or ""
     }
 
-# 🌐 Choose best headers
 def get_headers():
     return {
         "User-Agent": random.choice(USER_AGENTS)
     }
 
-# 🛰️ Scraper methods
 def extract_text_from_site(url):
     try:
         headers = get_headers()
@@ -107,15 +98,14 @@ def extract_text_from_site(url):
                     raise Exception("403 Forbidden")
 
                 if response.status_code < 400:
-                    text = response.text
-                    return text, None
+                    return response.text, None
                 else:
                     print(f"⚠️ Error with {api_name} → HTTP {response.status_code}")
 
             except Exception as e:
                 print(f"⚠️ Error with {api_name} → {e}")
 
-        # ☁️ Final fallback
+        # fallback with cloudscraper
         try:
             import cloudscraper
             scraper = cloudscraper.create_scraper()
@@ -128,8 +118,7 @@ def extract_text_from_site(url):
     except Exception as e:
         print(f"❌ Exception in extract_text_from_site → {e}")
         return None
-        
-# 📄 Load target URLs
+
 def load_target_sites():
     try:
         with open("target_sites.txt", "r") as file:
@@ -138,8 +127,8 @@ def load_target_sites():
         print(f"❌ Failed to load target sites: {e}")
         return []
 
-# 🚀 Main runner
 def main():
+    print("🚀 NeuroX Crawler STARTED")
     TARGET_SITES = load_target_sites()
     for site in TARGET_SITES:
         try:
@@ -174,33 +163,17 @@ def main():
         redis_client.sadd("seen_hashes", content_hash)
 
 # ------------------ Flask ------------------
-from flask import Flask
 app = Flask(__name__)
 
 @app.route('/crawl-now', methods=["GET"])
 def crawl_now():
     try:
-        Thread(target=main).start()
-        return "📡 Manual crawl triggered"
+        print("⚡ Manual crawl triggered.")
+        main()  # اجرا مستقیم بدون thread
+        return "✅ Crawl completed"
     except Exception as e:
-        return f"❌ Failed to start manual crawl: {e}"
+        return f"❌ Failed to crawl: {e}"
 
 @app.route('/', methods=["GET"])
 def home():
     return "🟢 NeuroX Crawler Running."
-
-def loop_runner():
-    try:
-        while True:
-            print(f"⏰ Auto Run: {datetime.now(timezone.utc).isoformat()}")
-            main()
-            print("🟢 Sleeping for 1 hour...\n")
-            time.sleep(60 * 60)
-    except Exception as e:
-        print("❌ Error in loop:", e)
-
-if __name__ == "__main__":
-    flask_thread = Thread(target=lambda: app.run(host="0.0.0.0", port=10000))
-    flask_thread.daemon = True
-    flask_thread.start()
-    loop_runner()
