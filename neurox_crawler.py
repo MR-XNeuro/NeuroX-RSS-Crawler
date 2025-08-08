@@ -106,9 +106,17 @@ def extract_text_from_site(url):
                 if response.status_code == 403:
                     raise Exception("403 Forbidden")
 
-                if response.status_code < 400:
-                    text = response.text
-                    return text, None
+if response.status_code < 400:
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # نمونه استخراج متن مفید
+    paragraphs = soup.find_all("p")
+    text_content = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 50)
+
+    if not text_content:
+        continue  # اگر چیزی مفید نبود، رد کن
+
+    return text_content, None
                 else:
                     print(f"⚠️ Error with {api_name} → HTTP {response.status_code}")
 
