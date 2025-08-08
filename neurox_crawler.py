@@ -37,16 +37,35 @@ USER_AGENTS = [
 ]
 
 # 📄 Load target URLs
-def load_target_sites():
-    try:
-        with open("target_sites.txt", "r") as file:
-            return [line.strip() for line in file if line.strip()]
-    except:
-        return []
-
-# 📤 Send to Backendless (Placeholder)
 def post_to_backendless(post):
-    print(f"✅ Sent to Backendless: {post['title']} → {post['platform']}")
+    try:
+        # Backendless config
+        APP_ID = os.getenv("BACKENDLESS_APP_ID")
+        API_KEY = os.getenv("BACKENDLESS_API_KEY")  # REST API Key
+        BASE_URL = f"https://api.backendless.com/{APP_ID}/{API_KEY}/data/Posts"
+
+        # Payload
+        payload = {
+            "title": post["title"],
+            "description": post["content"],
+            "source": post["source"],
+            "image": post["image"],
+            "platform": post["platform"]
+        }
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(BASE_URL, headers=headers, data=json.dumps(payload))
+        
+        if response.status_code < 300:
+            print(f"✅ Sent to Backendless: {post['title']}")
+        else:
+            print(f"❌ Failed to send to Backendless: {response.status_code} → {response.text}")
+
+    except Exception as e:
+        print(f"❌ Exception sending to Backendless: {e}")
 
 # 🧠 Generate post object
 def generate_post(text, url, image_url=None):
