@@ -1,4 +1,3 @@
-https://www.clevelandclinic.org
 https://www.begambleaware.org
 https://www.gamblersanonymous.org.uk
 https://www.responsiblegambling.org
@@ -6,26 +5,18 @@ https://www.psychologytoday.com
 https://www.verywellmind.com
 https://www.marketwatch.com
 https://www.igamingbusiness.com
-https://www.onlinegambling.com
-https://www.casino.org
 https://www.pokernews.com
 https://www.gamblingnews.com
 https://www.gambling.com
-https://www.legalsportsreport.com
 https://www.cardschat.com
-https://www.fool.com
-
-# Crypto / Trading
 https://www.coindesk.com
 https://cointelegraph.com
 https://cryptobriefing.com
 https://www.investing.com
-https://decrypt.co
 https://www.fxstreet.com
 https://www.blockworks.co
 https://bitcoinmagazine.com
 https://www.finbold.com
 https://www.makeuseof.com
-https://cryptopotato.com
 https://beincrypto.com
 https://www.tradingview.com
