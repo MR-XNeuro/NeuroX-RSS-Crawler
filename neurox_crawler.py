@@ -151,10 +151,16 @@ def load_promos(file_path="promo_texts.txt"):
 
 PROMO_LINES = load_promos()
 
+platform_index = 0
+
 def generate_post(text, source_url, image_url="", page_title=None):
+    global platform_index
     promo = random.choice(PROMO_LINES) if PROMO_LINES else ""
-    platform = random.choice(PLATFORMS)
     now = datetime.now(timezone.utc)
+
+    # نوبتی بین پلتفرم‌ها
+    platform = PLATFORMS[platform_index % len(PLATFORMS)]
+    platform_index += 1
 
     if page_title:
         title = page_title[:250]
