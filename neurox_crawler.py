@@ -188,31 +188,42 @@ def post_to_backendless(data):
         print("❌ Failed to send post:", e)
 
 
+
 def main():
     TARGET_SITES = load_target_sites()
     print(f"📄 Loaded {len(TARGET_SITES)} target sites")
 
-    # فقط ۴ سایت به صورت تصادفی انتخاب می‌کنیم
     if not TARGET_SITES:
         print("⚠️ No target sites loaded.")
         return
 
-    sites_to_process = random.sample(TARGET_SITES, min(4, len(TARGET_SITES)))
+    random.shuffle(TARGET_SITES)  # ترتیب را تصادفی کنیم
 
-    for site in sites_to_process:
+    found_new = False
+    for site in TARGET_SITES:
         print(f"🔍 Scraping: {site}")
         text, image_url, page_title = extract_text_from_site(site)
         if not text:
             print(f"⚠️ No text extracted from {site}")
             continue
-        # هش بر اساس متن و آدرس
+
         content_hash = hashlib.sha256((site + text).encode()).hexdigest()
         if redis_client.sismember("seen_hashes", content_hash):
             print(f"⏭️ Duplicate content for {site}. Skipping.")
             continue
-        post = generate_post(text, site, image_url, page_title)
-        post_to_backendless(post)
+
+        # ارسال همان مطلب به هر چهار پلتفرم
+        for platform in PLATFORMS:
+            post = generate_post(text, site, image_url, page_title)
+            post["targetPlatform"] = platform
+            post_to_backendless(post)
+
         redis_client.sadd("seen_hashes", content_hash)
+        found_new = True
+        break
+
+    if not found_new:
+        print("⚠️ No new content found in any target site.")
 
 # === Flask Setup ===
 app = Flask(__name__)
@@ -243,8 +254,7 @@ def loop_runner():
         while True:
             print(f"⏰ Auto Run: {datetime.now(timezone.utc).isoformat()}")
             main()
-            sleep_time = random.randint(2 * 60 * 60, 3 * 60 * 60)  # ۲ تا ۳ ساعت
-            print(f"🟢 Sleeping for {sleep_time // 3600} hours...\n")
+            sleep_time = 60 * 60  # هر ۱ ساعت
             time.sleep(sleep_time)
     except Exception as e:
         print("❌ Error in loop:", e)
