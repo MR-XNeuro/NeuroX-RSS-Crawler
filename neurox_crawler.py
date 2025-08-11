@@ -187,10 +187,19 @@ def post_to_backendless(data):
     except Exception as e:
         print("❌ Failed to send post:", e)
 
+
 def main():
     TARGET_SITES = load_target_sites()
     print(f"📄 Loaded {len(TARGET_SITES)} target sites")
-    for site in TARGET_SITES:
+
+    # فقط ۴ سایت به صورت تصادفی انتخاب می‌کنیم
+    if not TARGET_SITES:
+        print("⚠️ No target sites loaded.")
+        return
+
+    sites_to_process = random.sample(TARGET_SITES, min(4, len(TARGET_SITES)))
+
+    for site in sites_to_process:
         print(f"🔍 Scraping: {site}")
         text, image_url, page_title = extract_text_from_site(site)
         if not text:
@@ -234,18 +243,17 @@ if __name__ == "__main__":
     def run_flask():
         app.run(host="0.0.0.0", port=10000)
 
-    def loop_runner():
-        try:
-            while True:
-                print(f"⏰ Auto Run: {datetime.now(timezone.utc).isoformat()}")
-                main()
-                print("🟢 Sleeping for 1 hour...\n")
-                time.sleep(60 * 60)
-        except Exception as e:
-            print("❌ Error in loop:", e)
-
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
+    
+def loop_runner():
+    try:
+        while True:
+            print(f"⏰ Auto Run: {datetime.now(timezone.utc).isoformat()}")
+            main()
+            sleep_time = random.randint(2 * 60 * 60, 3 * 60 * 60)  # ۲ تا ۳ ساعت
+            print(f"🟢 Sleeping for {sleep_time // 3600} hours...
+")
+            time.sleep(sleep_time)
+    except Exception as e:
+        print("❌ Error in loop:", e)
 
     loop_runner()
