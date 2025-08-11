@@ -237,23 +237,26 @@ def trigger_crawler():
     Thread(target=async_crawl).start()
     return "✅ Crawling started!"
 
-if __name__ == "__main__":
-    import threading
 
-    def run_flask():
-        app.run(host="0.0.0.0", port=10000)
-
-    
 def loop_runner():
     try:
         while True:
             print(f"⏰ Auto Run: {datetime.now(timezone.utc).isoformat()}")
             main()
             sleep_time = random.randint(2 * 60 * 60, 3 * 60 * 60)  # ۲ تا ۳ ساعت
-            print(f"🟢 Sleeping for {sleep_time // 3600} hours...
-")
+            print(f"🟢 Sleeping for {sleep_time // 3600} hours...\n")
             time.sleep(sleep_time)
     except Exception as e:
         print("❌ Error in loop:", e)
+
+if __name__ == "__main__":
+    import threading
+
+    def run_flask():
+        app.run(host="0.0.0.0", port=10000)
+
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
 
     loop_runner()
