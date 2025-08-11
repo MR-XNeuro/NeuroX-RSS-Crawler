@@ -60,11 +60,11 @@ def extract_text_from_site(url):
     APILAYER_API_KEY = os.getenv("APILAYER_API_KEY")
 
     if not SCRAPER_API_KEY or not APILAYER_API_KEY:
-        print("❌ API keys not found in environment variables.")
-        return None, None, None  # سه مقدار: متن، عکس، عنوان
+        print(f"❌ API keys not found. Skipping: {url}")
+        return None, None, None
 
     headers_scraperapi = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0"
+        "User-Agent": "Mozilla/5.0"
     }
 
     headers_apilayer = {
@@ -94,8 +94,8 @@ def extract_text_from_site(url):
 
     for api in apis:
         try:
-            print(f"🛰️ Trying: {api['name']}")
-            time.sleep(random.uniform(2, 5))
+            print(f"🛰️ Trying: {api['name']} for {url}")
+            time.sleep(random.uniform(1, 3))
 
             if api["method"] == "GET":
                 response = requests.get(api["url"], headers=api["headers"], timeout=15)
@@ -113,26 +113,26 @@ def extract_text_from_site(url):
             html = response.text if not api["is_json"] else response.json().get("content", "")
             soup = BeautifulSoup(html, "html.parser")
             paragraphs = soup.find_all("p")
-            text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+            text = "\n".join(p.get_text().strip() for p in paragraphs if p.get_text().strip())
             image_url = extract_image_from_site(soup)
             page_title = soup.title.string.strip() if soup.title else None
             return text.strip(), image_url, page_title
 
         except Exception as e:
-            print(f"⚠️ Error with {api['name']} → {e}")
+            print(f"⚠️ Error with {api['name']} for {url} → {e}")
             continue
 
-    # Fallback به cloudscraper
+    # Fallback cloudscraper
     try:
-        print("☁️ Fallback: Trying cloudscraper...")
-        time.sleep(random.uniform(2, 5))
+        print(f"☁️ Fallback: Trying cloudscraper for {url}")
+        time.sleep(random.uniform(1, 3))
         scraper = cloudscraper.create_scraper()
         response = scraper.get(url, headers=headers_scraperapi, timeout=15)
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}")
         soup = BeautifulSoup(response.text, "html.parser")
         paragraphs = soup.find_all("p")
-        text = "\n".join(p.get_text() for p in paragraphs if len(p.get_text()) > 80)
+        text = "\n".join(p.get_text().strip() for p in paragraphs if p.get_text().strip())
         image_url = extract_image_from_site(soup)
         page_title = soup.title.string.strip() if soup.title else None
         return text.strip(), image_url, page_title
@@ -183,14 +183,17 @@ def post_to_backendless(data):
 
 def main():
     TARGET_SITES = load_target_sites()
+    print(f"📄 Loaded {len(TARGET_SITES)} target sites")
     for site in TARGET_SITES:
-        print("🔍 Scraping:", site)
+        print(f"🔍 Scraping: {site}")
         text, image_url, page_title = extract_text_from_site(site)
         if not text:
+            print(f"⚠️ No text extracted from {site}")
             continue
-        content_hash = hashlib.sha256(text.encode()).hexdigest()
+        # هش بر اساس متن و آدرس
+        content_hash = hashlib.sha256((site + text).encode()).hexdigest()
         if redis_client.sismember("seen_hashes", content_hash):
-            print("⏭️ Duplicate content. Skipping.")
+            print(f"⏭️ Duplicate content for {site}. Skipping.")
             continue
         post = generate_post(text, site, image_url, page_title)
         post_to_backendless(post)
