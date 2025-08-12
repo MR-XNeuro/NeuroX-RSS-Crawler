@@ -187,8 +187,6 @@ def post_to_backendless(data):
     except Exception as e:
         print("❌ Failed to send post:", e)
 
-
-
 def main():
     TARGET_SITES = load_target_sites()
     print(f"📄 Loaded {len(TARGET_SITES)} target sites")
@@ -197,7 +195,7 @@ def main():
         print("⚠️ No target sites loaded.")
         return
 
-    random.shuffle(TARGET_SITES)  # ترتیب را تصادفی کنیم
+    random.shuffle(TARGET_SITES)  # ترتیب تصادفی
 
     found_new = False
     for site in TARGET_SITES:
@@ -212,15 +210,14 @@ def main():
             print(f"⏭️ Duplicate content for {site}. Skipping.")
             continue
 
-        # ارسال همان مطلب به هر چهار پلتفرم
-        for platform in PLATFORMS:
-            post = generate_post(text, site, image_url, page_title)
-            post["targetPlatform"] = platform
-            post_to_backendless(post)
+        # ارسال فقط به WordPress
+        post = generate_post(text, site, image_url, page_title)
+        post["targetPlatform"] = "WordPress"
+        post_to_backendless(post)
 
         redis_client.sadd("seen_hashes", content_hash)
         found_new = True
-        break
+        break  # بعد از اولین مطلب جدید، توقف
 
     if not found_new:
         print("⚠️ No new content found in any target site.")
